@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Catanduanes Emergency & Disaster Operations Portal (C-EDOP)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            400: '#38bdf8',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            950: '#0b1329',
+                        },
+                        dark: {
+                            950: '#070b12',
+                            900: '#0f172a',
+                            850: '#152035',
+                            800: '#1e293b',
+                            700: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Touch friendly optimizations */
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+            50% { opacity: 0.85; transform: scale(1.02); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+        }
+        .pulse-red-glow { animation: pulse-red 2s infinite; }
+
+        /* Smooth tab transition */
+        .tab-content { transition: opacity 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-dark-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white pb-24 md:pb-6">
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-4 right-4 left-4 md:left-auto md:w-96 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- GLOBAL FIXED HEADER -->
+    <header class="bg-dark-900 border-b border-slate-800 sticky top-0 z-50 shadow-xl">
+        
+        <!-- BRANDING & LIVE STATUS -->
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 shrink-0">
+                    <i class="fa-solid fa-shield-halved text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-sm md:text-base tracking-tight text-white leading-tight flex items-center gap-1.5">
+                        <span>C-EDOP</span>
+                        <span class="text-brand-400 font-medium text-xs hidden sm:inline">CATANDUANES</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-none">PDRRMO Disaster Operations Portal</p>
+                </div>
+            </div>
+
+            <!-- Header Right Badges -->
+            <div class="flex items-center gap-2 text-xs">
+                <!-- System Alert Badge -->
+                <div id="global-alert-badge" class="bg-red-500/10 border border-red-500/40 rounded-lg px-2.5 py-1 text-red-400 font-extrabold text-[11px] flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+                    <span id="global-alert-text" class="truncate max-w-[120px] sm:max-w-none">RED ALERT (SIGNAL #4)</span>
+                </div>
+
+                <!-- Live Clock (Hidden on very small mobile, visible on sm+) -->
+                <div class="hidden sm:flex bg-dark-850 border border-slate-700/80 rounded-lg px-2.5 py-1 font-mono text-slate-300 items-center gap-1.5 text-[11px]">
+                    <i class="fa-regular fa-clock text-brand-400"></i>
+                    <span id="live-clock">00:00:00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- GLOBAL SCENARIO SWITCHER TOOLBAR (Mobile Touch Scrollable) -->
+        <div class="bg-dark-950/90 border-t border-slate-800/80 px-3 py-2 overflow-x-auto scrollbar-none">
+            <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 min-w-max">
+                
+                <div class="flex items-center gap-1.5 text-slate-300 font-bold text-[11px]">
+                    <i class="fa-solid fa-sliders text-brand-400"></i>
+                    <span class="hidden sm:inline">SIMULATED SCENARIO:</span>
+                </div>
+
+                <!-- Scenario Buttons -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="setScenario('normal')" id="scen-btn-normal" class="px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-dark-850 text-slate-400 border-slate-700 active:scale-95">
+                        <i class="fa-solid fa-sun text-emerald-400"></i>
+                        <span>Normal Weather</span>
+                    </button>
+
+                    <button onclick="setScenario('habagat')" id="scen-btn-habagat" class="px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-dark-850 text-slate-400 border-slate-700 active:scale-95">
+                        <i class="fa-solid fa-cloud-showers-heavy text-amber-400"></i>
+                        <span>Habagat Monsoon</span>
+                    </button>
+
+                    <button onclick="setScenario('typhoon')" id="scen-btn-typhoon" class="px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-red-600/20 text-red-400 border-red-500 active:scale-95">
+                        <i class="fa-solid fa-volcano text-red-500 animate-pulse"></i>
+                        <span>Super Typhoon Signal #4</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- DESKTOP TOP TAB NAVIGATION (Hidden on mobile, visible on md+) -->
+        <nav class="hidden md:block bg-dark-950 border-t border-slate-800 px-4">
+            <div class="max-w-7xl mx-auto flex space-x-2 py-2">
+                <button onclick="switchTab('home')" id="dtab-home" class="dtab-btn px-4 py-2 text-xs font-bold rounded-lg transition text-white bg-brand-600 flex items-center gap-2">
+                    <i class="fa-solid fa-house"></i> Home
+                </button>
+                <button onclick="switchTab('weather')" id="dtab-weather" class="dtab-btn px-4 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-sun-rain text-cyan-400"></i> Weather Map
+                </button>
+                <button onclick="switchTab('incident')" id="dtab-incident" class="dtab-btn px-4 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white flex items-center gap-2 relative">
+                    <i class="fa-solid fa-circle-exclamation text-amber-400"></i> Incident Report
+                    <span id="dinc-badge" class="bg-red-500 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">4</span>
+                </button>
+                <button onclick="switchTab('shelter')" id="dtab-shelter" class="dtab-btn px-4 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-house-chimney-crack text-emerald-400"></i> Evacuation Shelters
+                </button>
+                <button onclick="switchTab('broadcast')" id="dtab-broadcast" class="dtab-btn px-4 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-tower-cell text-red-400"></i> Broadcast Console
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MOBILE FIXED BOTTOM NAVIGATION BAR -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-900/95 backdrop-blur-lg border-t border-slate-800 shadow-2xl px-2 py-1.5">
+        <div class="grid grid-cols-5 gap-1 text-center">
+            
+            <button onclick="switchTab('home')" id="mtab-home" class="mtab-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-brand-400 transition active:scale-95">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Home</span>
+            </button>
+
+            <button onclick="switchTab('weather')" id="mtab-weather" class="mtab-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-slate-400 transition active:scale-95">
+                <i class="fa-solid fa-cloud-sun-rain text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Weather</span>
+            </button>
+
+            <button onclick="switchTab('incident')" id="mtab-incident" class="mtab-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-slate-400 transition active:scale-95 relative">
+                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Report</span>
+                <span id="minc-badge" class="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+
+            <button onclick="switchTab('shelter')" id="mtab-shelter" class="mtab-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-slate-400 transition active:scale-95">
+                <i class="fa-solid fa-house-chimney-user text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Shelters</span>
+            </button>
+
+            <button onclick="switchTab('broadcast')" id="mtab-broadcast" class="mtab-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-slate-400 transition active:scale-95">
+                <i class="fa-solid fa-tower-cell text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Alerts</span>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTENT AREA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-4">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: HOME DASHBOARD SUMMARY -->
+        <!-- ========================================== -->
+        <section id="sec-home" class="tab-content space-y-4">
+            
+            <!-- Welcome Header Card -->
+            <div class="glass-panel p-4 rounded-2xl border border-brand-500/30 bg-gradient-to-r from-dark-900 via-dark-850 to-brand-950/40">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Provincial Command Center</span>
+                        <h2 class="text-base sm:text-lg font-extrabold text-white leading-tight mt-0.5">Catanduanes Operational Summary</h2>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                            Centralized disaster management monitoring live meteorology, citizen emergency reports, open shelter headcounts, and municipal alerts across all 11 towns.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Scenario Telemetry Metric Cards Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                
+                <!-- Weather Metric Card -->
+                <div class="glass-panel p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                        <span class="text-[11px]">Current Weather</span>
+                        <i id="home-weather-icon" class="fa-solid fa-cloud-bolt text-red-400"></i>
+                    </div>
+                    <div class="my-2">
+                        <div id="home-temp" class="text-2xl sm:text-3xl font-extrabold text-white font-mono leading-none">24°C</div>
+                        <div id="home-rain" class="text-[11px] font-mono text-cyan-400 mt-1">95.0 mm/h Rain</div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                        <span>Wind: <strong id="home-wind" class="text-slate-200">210 km/h</strong></span>
+                        <span id="home-weather-desc" class="text-red-400 font-bold truncate">Super Typhoon</span>
+                    </div>
+                    <div id="home-card-bar-1" class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-rose-700"></div>
+                </div>
+
+                <!-- Incident Summary Card -->
+                <div class="glass-panel p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                        <span class="text-[11px]">Dispatch Queue</span>
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    </div>
+                    <div class="my-2">
+                        <div id="home-inc-total" class="text-2xl sm:text-3xl font-extrabold text-white font-mono leading-none">4</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Active Reports</div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                        <span>High: <strong id="home-inc-high" class="text-red-400 font-bold">3</strong></span>
+                        <span>Resolved: <strong id="home-inc-resolved" class="text-emerald-400 font-bold">0</strong></span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-red-600"></div>
+                </div>
+
+                <!-- Evacuation Summary Card -->
+                <div class="glass-panel p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                        <span class="text-[11px]">Evacuation Shelters</span>
+                        <i class="fa-solid fa-house-chimney-crack text-emerald-400"></i>
+                    </div>
+                    <div class="my-2">
+                        <div id="home-evac-total" class="text-2xl sm:text-3xl font-extrabold text-white font-mono leading-none">5,840</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Evacuees Logged</div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                        <span>Active: <strong class="text-slate-200">11 Centers</strong></span>
+                        <span class="text-emerald-400 font-bold">ALL TOWNS</span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600"></div>
+                </div>
+
+                <!-- Alert Level Card -->
+                <div class="glass-panel p-3.5 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                        <span class="text-[11px]">Broadcast Status</span>
+                        <i class="fa-solid fa-tower-cell text-red-400"></i>
+                    </div>
+                    <div class="my-2">
+                        <div id="home-alert-level-text" class="text-xl sm:text-2xl font-extrabold text-red-400 font-mono leading-tight">RED ALERT</div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 flex items-center justify-between">
+                        <span>CBS Protocol: <strong class="text-emerald-400 font-semibold">ACTIVE</strong></span>
+                        <span class="text-slate-300">R.A. 10639</span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-rose-700"></div>
+                </div>
+
+            </div>
+
+            <!-- Quick Navigation Buttons & Activity Feed -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Quick Navigation Buttons -->
+                <div class="lg:col-span-5 glass-panel p-4 rounded-2xl space-y-2.5">
+                    <h3 class="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                        <i class="fa-solid fa-bolt text-brand-400"></i> Module Quick Shortcuts
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="switchTab('weather')" class="bg-dark-950 hover:bg-dark-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition active:scale-95">
+                            <i class="fa-solid fa-cloud-sun-rain text-cyan-400 text-xl mb-1.5"></i>
+                            <span class="text-xs font-bold text-white leading-tight">Weather Map</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">Satellite Radar</span>
+                        </button>
+
+                        <button onclick="switchTab('incident')" class="bg-dark-950 hover:bg-dark-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition active:scale-95">
+                            <i class="fa-solid fa-paper-plane text-amber-400 text-xl mb-1.5"></i>
+                            <span class="text-xs font-bold text-white leading-tight">Report Incident</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">Citizen Distress</span>
+                        </button>
+
+                        <button onclick="switchTab('shelter')" class="bg-dark-950 hover:bg-dark-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition active:scale-95">
+                            <i class="fa-solid fa-house-chimney-user text-emerald-400 text-xl mb-1.5"></i>
+                            <span class="text-xs font-bold text-white leading-tight">Shelter Tracker</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">11 Municipalities</span>
+                        </button>
+
+                        <button onclick="switchTab('broadcast')" class="bg-dark-950 hover:bg-dark-900 border border-slate-800 p-3 rounded-xl flex flex-col items-center text-center transition active:scale-95">
+                            <i class="fa-solid fa-tower-cell text-red-400 text-xl mb-1.5"></i>
+                            <span class="text-xs font-bold text-white leading-tight">Broadcast (CBS)</span>
+                            <span class="text-[10px] text-slate-400 mt-0.5">Cell Tower Alert</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Feed -->
+                <div class="lg:col-span-7 glass-panel p-4 rounded-2xl flex flex-col justify-between space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                                <i class="fa-solid fa-stream text-brand-400"></i> Operations Activity Log
+                            </h3>
+                            <span class="text-[10px] text-slate-500 font-mono">Live Audit</span>
+                        </div>
+
+                        <div id="home-activity-feed" class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                            <!-- Dynamic Population -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: WEATHER MAP & 7-DAY FORECAST -->
+        <!-- ========================================== -->
+        <section id="sec-weather" class="tab-content space-y-4 hidden">
+            
+            <div class="glass-panel p-3.5 rounded-2xl space-y-3">
+                
+                <!-- Windy Map Switcher & Refresh Controls -->
+                <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                    <div>
+                        <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-satellite-dish text-cyan-400"></i> Meteorological Radar Feed
+                        </h2>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Real-time satellite wind and rainfall visualization.</p>
+                    </div>
+
+                    <!-- View Toggle & Refresh Buttons -->
+                    <div class="flex items-center gap-1.5">
+                        
+                        <!-- Dedicated Refresh Map Button -->
+                        <button onclick="refreshWindyMap()" class="px-2.5 py-1.5 bg-dark-950 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold rounded-xl text-[11px] transition flex items-center gap-1.5 active:scale-95" title="Reload radar stream">
+                            <i class="fa-solid fa-arrows-rotate text-brand-400"></i>
+                            <span class="hidden sm:inline">Refresh Map</span>
+                        </button>
+
+                        <div class="flex bg-dark-950 p-1 rounded-xl border border-slate-800 text-xs">
+                            <button id="btn-windy-catanduanes" onclick="switchWindyView('catanduanes')" class="px-3 py-1.5 font-bold rounded-lg transition bg-brand-500 text-white shadow text-[11px] active:scale-95">
+                                Catanduanes
+                            </button>
+                            <button id="btn-windy-par" onclick="switchWindyView('par')" class="px-3 py-1.5 font-semibold rounded-lg transition text-slate-400 hover:text-white text-[11px] active:scale-95">
+                                PAR Wide
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Windy Embed Container (Mobile Optimized Height) -->
+                <div id="windy-catanduanes-wrapper" class="w-full h-[380px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-800 bg-dark-950">
+                    <iframe 
+                        id="iframe-windy-catanduanes"
+                        title="Catanduanes Weather Map"
+                        width="100%" 
+                        height="100%" 
+                        src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=10&overlay=wind&product=ecmwf&level=surface&lat=13.6841&lon=124.2882&detailLat=13.6841&detailLon=124.2882&marker=true" 
+                        frameborder="0"
+                        style="border: 0;">
+                    </iframe>
+                </div>
+
+                <div id="windy-par-wrapper" class="w-full h-[380px] sm:h-[480px] rounded-xl overflow-hidden border border-slate-800 bg-dark-950 hidden">
+                    <iframe 
+                        id="iframe-windy-par"
+                        title="PAR Philippines Weather Map"
+                        width="100%" 
+                        height="100%" 
+                        src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=5&overlay=wind&product=ecmwf&level=surface&lat=13.0000&lon=124.0000&detailLat=13.0000&detailLon=124.0000&marker=false" 
+                        frameborder="0"
+                        style="border: 0;">
+                    </iframe>
+                </div>
+
+            </div>
+
+            <!-- 7-DAY WEATHER FORECAST GRID (SCENARIO SYNCED) -->
+            <div class="glass-panel p-4 rounded-2xl space-y-3">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <div>
+                        <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-calendar-week text-brand-400"></i> 7-Day Meteorological Outlook
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Daily forecast model for Catanduanes municipalities.</p>
+                    </div>
+                    <button onclick="fetchMultiDayForecast()" class="text-[11px] text-brand-400 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 active:scale-95">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+
+                <div id="forecast-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                    <!-- Dynamic Forecast Population -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: INCIDENT REPORT (NO AI / SEARCHABLE BARANGAYS) -->
+        <!-- ========================================== -->
+        <section id="sec-incident" class="tab-content space-y-4 hidden">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Citizen Distress Submission Form -->
+                <div class="lg:col-span-5 glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+                    
+                    <div class="border-b border-slate-800 pb-2.5">
+                        <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-paper-plane text-amber-400"></i> Submit Distress Hazard Report
+                        </h2>
+                        <p class="text-[11px] text-slate-400">Log real-time distress call for emergency response dispatch.</p>
+                    </div>
+
+                    <form id="incident-report-form" onsubmit="handleIncidentSubmit(event)" class="space-y-3 text-xs">
+                        
+                        <!-- Reporter Info -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Reporter Name</label>
+                                <input type="text" id="rep-name" required placeholder="e.g. Juan Dela Cruz" class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Mobile Hotline</label>
+                                <input type="tel" id="rep-phone" required placeholder="09XX-XXX-XXXX" class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500 font-mono">
+                            </div>
+                        </div>
+
+                        <!-- Municipality & Searchable/Manual Free-Text Barangay -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Municipality</label>
+                                <select id="rep-muni" onchange="updateBarangayDatalist()" required class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500">
+                                    <option value="Bato">Bato</option>
+                                    <option value="Virac">Virac</option>
+                                    <option value="San Andres">San Andres</option>
+                                    <option value="San Miguel">San Miguel</option>
+                                    <option value="Baras">Baras</option>
+                                    <option value="Gigmoto">Gigmoto</option>
+                                    <option value="Viga">Viga</option>
+                                    <option value="Panganiban">Panganiban</option>
+                                    <option value="Bagamanoc">Bagamanoc</option>
+                                    <option value="Pandan">Pandan</option>
+                                    <option value="Caramoran">Caramoran</option>
+                                </select>
+                            </div>
+
+                            <!-- Datalist Combobox explicitly allowing typed custom text for remote sitios -->
+                            <div>
+                                <label class="block text-slate-300 font-semibold mb-1 text-[11px]">
+                                    Barangay / Sitio <span class="text-brand-400 font-normal">(Type or Select)</span>
+                                </label>
+                                <input type="text" id="rep-brgy" list="barangay-list" required placeholder="Type or select Barangay..." class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500">
+                                <datalist id="barangay-list">
+                                    <!-- Populated dynamically via JS -->
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <!-- Searchable / Manual Free-Text Hazard Category Combobox -->
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">
+                                Hazard Category <span class="text-brand-400 font-normal">(Type or Select)</span>
+                            </label>
+                            <input type="text" id="rep-category" list="category-list" required placeholder="Type or select hazard category..." class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500">
+                            <datalist id="category-list">
+                                <option value="Severe Flooding / Rising Water">
+                                <option value="Landslide / Slope Collapse">
+                                <option value="Trapped Resident / Medical Emergency">
+                                <option value="Fallen Utility Poles / Blocked Highway">
+                                <option value="Severe Structural Damage">
+                                <option value="Coastal Storm Surge / High Waves">
+                                <option value="Power & Telecom Outage">
+                            </datalist>
+                        </div>
+
+                        <!-- Manual Priority Level -->
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Report Priority Level</label>
+                            <select id="rep-priority" required class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white font-bold focus:outline-none focus:border-brand-500">
+                                <option value="High" class="text-red-400 font-bold">High Priority (Urgent Emergency / Life Threat)</option>
+                                <option value="Medium" class="text-amber-400 font-bold">Medium Priority (Hazard Alert / Blocked Road)</option>
+                                <option value="Low" class="text-emerald-400 font-bold">Low Priority (General Hazard Notice)</option>
+                            </select>
+                        </div>
+
+                        <!-- Situation Details -->
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Situation Details</label>
+                            <textarea id="rep-description" rows="3" required placeholder="Describe situation, trapped headcount, or flood depth..." class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500"></textarea>
+                        </div>
+
+                        <!-- Photo Attachment Simulation -->
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Photo Evidence (Optional)</label>
+                            <div class="border-2 border-dashed border-slate-700 rounded-lg p-3 text-center bg-dark-950/50 hover:bg-dark-950 transition cursor-pointer active:scale-95" onclick="document.getElementById('rep-photo').click()">
+                                <i class="fa-solid fa-camera text-slate-500 text-lg mb-1"></i>
+                                <span id="photo-label" class="block text-slate-400 text-[11px]">📷 Tap to simulate photo attachment</span>
+                                <input type="file" id="rep-photo" class="hidden" accept="image/*" onchange="previewPhoto(this)">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2 text-xs tracking-wider uppercase active:scale-95 min-h-[44px]">
+                            <i class="fa-solid fa-paper-plane"></i> SUBMIT TO DISPATCH QUEUE
+                        </button>
+                    </form>
+
+                </div>
+
+                <!-- Incident Dispatch Queue -->
+                <div class="lg:col-span-7 glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3">
+                    
+                    <div>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5 mb-3">
+                            <div>
+                                <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                                    <i class="fa-solid fa-list-check text-brand-400"></i> Emergency Dispatch Queue
+                                </h2>
+                                <p class="text-[11px] text-slate-400">PDRRMO active incident tracking queue.</p>
+                            </div>
+
+                            <!-- Filter Controls -->
+                            <div class="flex items-center gap-1 text-[11px] overflow-x-auto pb-1 scrollbar-none">
+                                <button onclick="filterQueue('ALL')" id="qfilter-ALL" class="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-bold shrink-0">All</button>
+                                <button onclick="filterQueue('High')" id="qfilter-High" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 shrink-0">High Only</button>
+                                <button onclick="filterQueue('Pending')" id="qfilter-Pending" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 shrink-0">Pending</button>
+                                <button onclick="filterQueue('Resolved')" id="qfilter-Resolved" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 shrink-0">Resolved</button>
+                            </div>
+                        </div>
+
+                        <div id="queue-container" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                            <!-- Dynamic Incident Population -->
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>Active Incident Reports: <strong id="queue-total-count" class="text-white">4</strong></span>
+                        <span class="text-slate-500">Dispatch System</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: EVACUATION SHELTERS (ALL 11 MUNICIPALITIES) -->
+        <!-- ========================================== -->
+        <section id="sec-shelter" class="tab-content space-y-4 hidden">
+            
+            <!-- Shelter Header Summary -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <div class="glass-panel p-3 rounded-2xl">
+                    <span class="text-[10px] text-slate-400 font-semibold block">Active Shelters</span>
+                    <div id="stat-shelters-count" class="text-lg sm:text-xl font-extrabold font-mono text-white mt-0.5">11 Centers</div>
+                </div>
+                <div class="glass-panel p-3 rounded-2xl">
+                    <span class="text-[10px] text-slate-400 font-semibold block">Evacuees Logged</span>
+                    <div id="stat-evacuees-count" class="text-lg sm:text-xl font-extrabold font-mono text-cyan-400 mt-0.5">5,840 Persons</div>
+                </div>
+                <div class="glass-panel p-3 rounded-2xl col-span-2 sm:col-span-1">
+                    <span class="text-[10px] text-slate-400 font-semibold block">Coverage</span>
+                    <div class="text-xs font-bold font-mono text-emerald-400 mt-1 flex items-center gap-1">
+                        <i class="fa-solid fa-building-shield"></i> ALL 11 TOWNS ACTIVE
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shelter Grid & Controls -->
+            <div class="glass-panel p-4 rounded-2xl space-y-3">
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                    <div>
+                        <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-house-chimney-user text-emerald-400"></i> Evacuation Shelter Headcount Manager
+                        </h2>
+                        <p class="text-[11px] text-slate-400">Log evacuee intake headcounts for Catanduanes municipal centers.</p>
+                    </div>
+
+                    <div class="w-full sm:w-auto">
+                        <input type="text" id="shelter-search" onkeyup="renderShelters()" placeholder="Search town or shelter..." class="w-full sm:w-60 bg-dark-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+                    </div>
+                </div>
+
+                <!-- ALL 11 Municipal Evacuation Centers Grid -->
+                <div id="shelters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Dynamic Shelter Cards -->
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: BROADCAST CONSOLE (R.A. 10639 / NO AUDIO) -->
+        <!-- ========================================== -->
+        <section id="sec-broadcast" class="tab-content space-y-4 hidden">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                <!-- Broadcast Form -->
+                <div class="lg:col-span-5 glass-panel p-4 rounded-2xl border border-red-500/30 space-y-3">
+                    
+                    <div class="border-b border-slate-800 pb-2.5">
+                        <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-tower-cell text-red-500"></i> Emergency Cell Broadcast Console (CBS)
+                        </h2>
+                        <p class="text-[11px] text-slate-400">Dispatch cell-tower emergency warning messages under R.A. 10639.</p>
+                    </div>
+
+                    <form onsubmit="handleBroadcastSubmit(event)" class="space-y-3 text-xs">
+                        
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Alert Severity Level</label>
+                            <select id="bcast-level" class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white font-bold focus:outline-none focus:border-red-500">
+                                <option value="EXTREME EMERGENCY" class="text-red-400">EXTREME EMERGENCY: Mandatory Evacuation Order</option>
+                                <option value="WEATHER ADVISORY" class="text-amber-400">WEATHER ADVISORY: Severe Heavy Rainfall & Wind</option>
+                                <option value="ALL CLEAR NOTICE" class="text-emerald-400">ALL CLEAR NOTICE: Hazard Threat Reduced</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Target Geographic Scope</label>
+                            <select id="bcast-scope" class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500">
+                                <option value="ALL CATANDUANES">ALL CATANDUANES (PROVINCE-WIDE)</option>
+                                <option value="Bato">Bato Municipality Only</option>
+                                <option value="Virac">Virac Municipality Only</option>
+                                <option value="San Andres">San Andres Municipality Only</option>
+                                <option value="San Miguel">San Miguel Municipality Only</option>
+                                <option value="Baras">Baras Municipality Only</option>
+                                <option value="Gigmoto">Gigmoto Municipality Only</option>
+                                <option value="Viga">Viga Municipality Only</option>
+                                <option value="Panganiban">Panganiban Municipality Only</option>
+                                <option value="Bagamanoc">Bagamanoc Municipality Only</option>
+                                <option value="Pandan">Pandan Municipality Only</option>
+                                <option value="Caramoran">Caramoran Municipality Only</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-300 font-semibold mb-1 text-[11px]">Official Alert Message Text</label>
+                            <textarea id="bcast-msg" rows="3" required placeholder="Type broadcast message (e.g. PDRRMO ALERT: Mandatory evacuation ordered for low-lying barangays in Bato due to storm surge)..." class="w-full bg-dark-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-brand-500"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 text-xs tracking-wider uppercase active:scale-95 min-h-[44px]">
+                            <i class="fa-solid fa-tower-cell"></i> DISPATCH CELL BROADCAST
+                        </button>
+
+                    </form>
+
+                    <!-- Info Box -->
+                    <div class="bg-dark-950 p-3 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                        <div class="text-brand-400 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-circle-info"></i> Republic Act No. 10639 Protocol
+                        </div>
+                        <p class="text-slate-400 leading-relaxed">
+                            Cell Broadcast transmits radio warning alerts directly to mobile handsets connected to Catanduanes cell towers without cellular data fees or network congestion.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Broadcast Log History -->
+                <div class="lg:col-span-7 glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+                    
+                    <div class="border-b border-slate-800 pb-2.5 flex items-center justify-between">
+                        <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-clock-rotate-left text-brand-400"></i> Issued Broadcast Log History
+                        </h2>
+                        <span class="text-[10px] text-slate-500 font-mono">PDRRMO Records</span>
+                    </div>
+
+                    <div id="broadcast-history-list" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                        <!-- Dynamic Population -->
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- SYSTEM JAVASCRIPT LOGIC ENGINE -->
+    <script>
+        // ==========================================
+        // GLOBAL SCENARIOS DATABASE MATRIX (ALL 11 TOWNS)
+        // ==========================================
+        const SCENARIOS = {
+            normal: {
+                name: 'Normal Weather (Fair)',
+                alertText: 'GREEN ALERT (NORMAL)',
+                alertClass: 'bg-emerald-500/10 border border-emerald-500/40 rounded-lg px-2.5 py-1 text-emerald-400 font-extrabold text-[11px] flex items-center gap-1.5 shadow-sm',
+                temp: '29°C',
+                rain: '0.2 mm/h',
+                wind: '12 km/h',
+                weatherDesc: 'Fair & Clear',
+                weatherIcon: 'fa-sun text-amber-300',
+                barClass: 'absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600',
+                incidents: [
+                    {
+                        id: 'INC-1011',
+                        reporter: 'Maria Santos',
+                        phone: '0917-111-2233',
+                        municipality: 'Virac',
+                        barangay: 'Palnab',
+                        category: 'Fallen Utility Poles / Blocked Highway',
+                        description: 'Overhanging tree branch touching utility line near street corner.',
+                        priority: 'Low',
+                        timestamp: '2 hours ago',
+                        status: 'Pending'
+                    }
+                ],
+                shelters: [
+                    { id: 'bato-1', name: 'Bato Regional High School Main Building', location: 'Brgy. Cabugao, Bato', municipality: 'Bato', occupied: 15, status: 'ACTIVE SHELTER' },
+                    { id: 'virac-1', name: 'CatSU Main Academic Building', location: 'Brgy. Calatagan Proper, Virac', municipality: 'Virac', occupied: 30, status: 'ACTIVE SHELTER' },
+                    { id: 'sandres-1', name: 'San Andres Vocational School (SAVS)', location: 'Brgy. Salvacion, San Andres', municipality: 'San Andres', occupied: 12, status: 'ACTIVE SHELTER' },
+                    { id: 'smiguel-1', name: 'San Miguel Central Elementary School', location: 'Brgy. District 1, San Miguel', municipality: 'San Miguel', occupied: 8, status: 'ACTIVE SHELTER' },
+                    { id: 'baras-1', name: 'Baras Municipal Evacuation Complex', location: 'Brgy. Eastern Poblacion, Baras', municipality: 'Baras', occupied: 10, status: 'ACTIVE SHELTER' },
+                    { id: 'gigmoto-1', name: 'Gigmoto Central School Evacuation Center', location: 'Brgy. District 2, Gigmoto', municipality: 'Gigmoto', occupied: 6, status: 'ACTIVE SHELTER' },
+                    { id: 'viga-1', name: 'Viga National High School Academic Bldg', location: 'Brgy. Asanza, Viga', municipality: 'Viga', occupied: 14, status: 'ACTIVE SHELTER' },
+                    { id: 'panganiban-1', name: 'Panganiban Multi-Purpose Center', location: 'Brgy. Cabuyoan, Panganiban', municipality: 'Panganiban', occupied: 5, status: 'ACTIVE SHELTER' },
+                    { id: 'bagamanoc-1', name: 'Bagamanoc Central Elementary School', location: 'Brgy. Poblacion, Bagamanoc', municipality: 'Bagamanoc', occupied: 9, status: 'ACTIVE SHELTER' },
+                    { id: 'pandan-1', name: 'Pandan School of Arts & Trades (PSAT)', location: 'Brgy. Libondao, Pandan', municipality: 'Pandan', occupied: 18, status: 'ACTIVE SHELTER' },
+                    { id: 'caramoran-1', name: 'Caramoran Municipal Evacuation Center', location: 'Brgy. Datag, Caramoran', municipality: 'Caramoran', occupied: 11, status: 'ACTIVE SHELTER' }
+                ]
+            },
+            habagat: {
+                name: 'Habagat / Heavy Monsoon',
+                alertText: 'ORANGE ALERT (MONSOON)',
+                alertClass: 'bg-amber-500/10 border border-amber-500/40 rounded-lg px-2.5 py-1 text-amber-400 font-extrabold text-[11px] flex items-center gap-1.5 shadow-sm',
+                temp: '25°C',
+                rain: '38.5 mm/h',
+                wind: '65 km/h',
+                weatherDesc: 'Monsoon Flood Risk',
+                weatherIcon: 'fa-cloud-showers-heavy text-amber-400',
+                barClass: 'absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-600',
+                incidents: [
+                    {
+                        id: 'INC-4021',
+                        reporter: 'Juan Dela Cruz',
+                        phone: '0917-555-1234',
+                        municipality: 'Bato',
+                        barangay: 'Cabugao',
+                        category: 'Severe Flooding / Rising Water',
+                        description: 'Monsoon flood water overflowing into street residential area.',
+                        priority: 'Medium',
+                        timestamp: '20 mins ago',
+                        status: 'Pending'
+                    },
+                    {
+                        id: 'INC-4022',
+                        reporter: 'Elena Ramos',
+                        phone: '0920-888-3344',
+                        municipality: 'San Andres',
+                        barangay: 'Codon',
+                        category: 'Landslide / Slope Collapse',
+                        description: 'Minor soil erosion along mountain highway slope. One lane passable.',
+                        priority: 'Medium',
+                        timestamp: '45 mins ago',
+                        status: 'In Progress'
+                    }
+                ],
+                shelters: [
+                    { id: 'bato-1', name: 'Bato Regional High School Main Building', location: 'Brgy. Cabugao, Bato', municipality: 'Bato', occupied: 220, status: 'RECEIVING EVACUEES' },
+                    { id: 'virac-1', name: 'CatSU Main Academic Building', location: 'Brgy. Calatagan Proper, Virac', municipality: 'Virac', occupied: 410, status: 'RECEIVING EVACUEES' },
+                    { id: 'sandres-1', name: 'San Andres Vocational School (SAVS)', location: 'Brgy. Salvacion, San Andres', municipality: 'San Andres', occupied: 180, status: 'RECEIVING EVACUEES' },
+                    { id: 'smiguel-1', name: 'San Miguel Central Elementary School', location: 'Brgy. District 1, San Miguel', municipality: 'San Miguel', occupied: 130, status: 'RECEIVING EVACUEES' },
+                    { id: 'baras-1', name: 'Baras Municipal Evacuation Complex', location: 'Brgy. Eastern Poblacion, Baras', municipality: 'Baras', occupied: 150, status: 'RECEIVING EVACUEES' },
+                    { id: 'gigmoto-1', name: 'Gigmoto Central School Evacuation Center', location: 'Brgy. District 2, Gigmoto', municipality: 'Gigmoto', occupied: 95, status: 'RECEIVING EVACUEES' },
+                    { id: 'viga-1', name: 'Viga National High School Academic Bldg', location: 'Brgy. Asanza, Viga', municipality: 'Viga', occupied: 210, status: 'RECEIVING EVACUEES' },
+                    { id: 'panganiban-1', name: 'Panganiban Multi-Purpose Center', location: 'Brgy. Cabuyoan, Panganiban', municipality: 'Panganiban', occupied: 85, status: 'RECEIVING EVACUEES' },
+                    { id: 'bagamanoc-1', name: 'Bagamanoc Central Elementary School', location: 'Brgy. Poblacion, Bagamanoc', municipality: 'Bagamanoc', occupied: 110, status: 'RECEIVING EVACUEES' },
+                    { id: 'pandan-1', name: 'Pandan School of Arts & Trades (PSAT)', location: 'Brgy. Libondao, Pandan', municipality: 'Pandan', occupied: 240, status: 'RECEIVING EVACUEES' },
+                    { id: 'caramoran-1', name: 'Caramoran Municipal Evacuation Center', location: 'Brgy. Datag, Caramoran', municipality: 'Caramoran', occupied: 175, status: 'RECEIVING EVACUEES' }
+                ]
+            },
+            typhoon: {
+                name: 'Super Typhoon Signal #4',
+                alertText: 'RED ALERT (SIGNAL #4)',
+                alertClass: 'bg-red-500/10 border border-red-500/40 rounded-lg px-2.5 py-1 text-red-400 font-extrabold text-[11px] flex items-center gap-1.5 shadow-sm',
+                temp: '24°C',
+                rain: '95.0 mm/h',
+                wind: '210 km/h',
+                weatherDesc: 'Super Typhoon',
+                weatherIcon: 'fa-cloud-bolt text-red-400',
+                barClass: 'absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-rose-700',
+                incidents: [
+                    {
+                        id: 'INC-8091',
+                        reporter: 'Juan Dela Cruz',
+                        phone: '0917-555-1234',
+                        municipality: 'Bato',
+                        barangay: 'Cabugao',
+                        category: 'Severe Flooding / Rising Water',
+                        description: 'Bato River breached dike. Water is chest high. 3 senior citizens trapped on roof needing rescue!',
+                        priority: 'High',
+                        timestamp: '10 mins ago',
+                        status: 'Pending'
+                    },
+                    {
+                        id: 'INC-8092',
+                        reporter: 'Maria Santos',
+                        phone: '0920-444-9876',
+                        municipality: 'Bato',
+                        barangay: 'Batalay',
+                        category: 'Landslide / Slope Collapse',
+                        description: 'Major slope collapse blocking highway access road.',
+                        priority: 'High',
+                        timestamp: '25 mins ago',
+                        status: 'In Progress'
+                    },
+                    {
+                        id: 'INC-8093',
+                        reporter: 'Pedro Alcantara',
+                        phone: '0918-333-2211',
+                        municipality: 'Virac',
+                        barangay: 'Palnab',
+                        category: 'Fallen Utility Poles / Blocked Highway',
+                        description: 'Three high-voltage electric poles down across street with live cables.',
+                        priority: 'High',
+                        timestamp: '40 mins ago',
+                        status: 'Pending'
+                    },
+                    {
+                        id: 'INC-8094',
+                        reporter: 'Grace Teves',
+                        phone: '0919-777-6655',
+                        municipality: 'Pandan',
+                        barangay: 'Napo',
+                        category: 'Severe Structural Damage',
+                        description: 'Roof damaged at community evacuation hall annex due to 200km/h storm gusts.',
+                        priority: 'High',
+                        timestamp: '55 mins ago',
+                        status: 'Pending'
+                    }
+                ],
+                shelters: [
+                    { id: 'bato-1', name: 'Bato Regional High School Main Building', location: 'Brgy. Cabugao, Bato', municipality: 'Bato', occupied: 580, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'virac-1', name: 'CatSU Main Academic Building', location: 'Brgy. Calatagan Proper, Virac', municipality: 'Virac', occupied: 940, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'sandres-1', name: 'San Andres Vocational School (SAVS)', location: 'Brgy. Salvacion, San Andres', municipality: 'San Andres', occupied: 460, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'smiguel-1', name: 'San Miguel Central Elementary School', location: 'Brgy. District 1, San Miguel', municipality: 'San Miguel', occupied: 380, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'baras-1', name: 'Baras Municipal Evacuation Complex', location: 'Brgy. Eastern Poblacion, Baras', municipality: 'Baras', occupied: 410, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'gigmoto-1', name: 'Gigmoto Central School Evacuation Center', location: 'Brgy. District 2, Gigmoto', municipality: 'Gigmoto', occupied: 310, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'viga-1', name: 'Viga National High School Academic Bldg', location: 'Brgy. Asanza, Viga', municipality: 'Viga', occupied: 520, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'panganiban-1', name: 'Panganiban Multi-Purpose Center', location: 'Brgy. Cabuyoan, Panganiban', municipality: 'Panganiban', occupied: 290, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'bagamanoc-1', name: 'Bagamanoc Central Elementary School', location: 'Brgy. Poblacion, Bagamanoc', municipality: 'Bagamanoc', occupied: 340, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'pandan-1', name: 'Pandan School of Arts & Trades (PSAT)', location: 'Brgy. Libondao, Pandan', municipality: 'Pandan', occupied: 820, status: 'HIGH INTAKE RECEIVING' },
+                    { id: 'caramoran-1', name: 'Caramoran Municipal Evacuation Center', location: 'Brgy. Datag, Caramoran', municipality: 'Caramoran', occupied: 790, status: 'HIGH INTAKE RECEIVING' }
+                ]
+            }
+        };
+
+        // ==========================================
+        // SYSTEM STATE
+        // ==========================================
+        const SYSTEM_STATE = {
+            currentScenario: 'typhoon',
+            currentTab: 'home',
+            filterQueuePriority: 'ALL',
+
+            barangays: {
+                'Bato': ['Cabugao', 'Batalay', 'Guinoberan', 'Libjo', 'San Pedro', 'Arobao', 'Sipi', 'Tibinag', 'San Roque', 'Santa Isabel'],
+                'Virac': ['Calatagan Proper', 'Plaza Taza', 'San Isidro Village', 'Concepcion', 'Palnab', 'Rawis', 'Igang', 'San Pablo', 'Cavinitan', 'Francia'],
+                'San Andres': ['Salvacion', 'Codon', 'Mayngaway', 'Lictin', 'Poblacion', 'Tominawog', 'Cabcab', 'Timbaan'],
+                'San Miguel': ['District 1', 'Poblacion', 'Tobrechon', 'Katipunan', 'Kiluogan', 'Paraiso', 'Paculating'],
+                'Baras': ['Eastern Poblacion', 'Putsan', 'Tilod', 'Puraran', 'Agban', 'Gizo', 'Macutal', 'Benticayan'],
+                'Gigmoto': ['District 2', 'District 1', 'Sioron', 'Biong', 'Dororian', 'San Pedro'],
+                'Viga': ['Asanza', 'Oco', 'Alinawan', 'Tinago', 'Rizal', 'Poblacion', 'San Jose', 'Villa Aurora'],
+                'Panganiban': ['Cabuyoan', 'Cabeman', 'Tawad', 'Panuto', 'San Nicolas', 'Burabod'],
+                'Bagamanoc': ['Poblacion', 'Hinipaan', 'Bacak', 'San Vicente', 'Quigaray'],
+                'Pandan': ['Libondao', 'Poblacion 1', 'Napo', 'San Isidro', 'Carangban', 'Canlubi', 'Luyang'],
+                'Caramoran': ['Datag', 'Baybay', 'Tubli', 'Maui', 'Sabloyon', 'Panique']
+            },
+
+            incidents: [],
+            shelters: [],
+
+            broadcasts: [
+                { id: 'BC-501', level: 'EXTREME EMERGENCY', scope: 'ALL CATANDUANES', message: 'MANDATORY EVACUATION ordered for coastal & river areas due to Typhoon Signal #4 storm surges.', timestamp: '1 hour ago' },
+                { id: 'BC-502', level: 'WEATHER ADVISORY', scope: 'Bato', message: 'Bato River water level approaching critical threshold. Barangays Cabugao & Batalay stay on high alert.', timestamp: '3 hours ago' }
+            ],
+
+            activities: [
+                { title: 'Scenario Activated', desc: 'Super Typhoon Signal #4 operational state engaged.', time: 'Just now', icon: 'fa-sliders', color: 'text-red-400' }
+            ]
+        };
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            startClock();
+            updateBarangayDatalist();
+            setScenario('typhoon');
+        });
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                const clockElem = document.getElementById('live-clock');
+                if (clockElem) clockElem.innerText = now.toLocaleTimeString('en-US', { hour12: false });
+            }, 1000);
+        }
+
+        // ==========================================
+        // SCENARIO SWITCHER LOGIC
+        // ==========================================
+        function setScenario(type) {
+            if (!SCENARIOS[type]) return;
+            
+            SYSTEM_STATE.currentScenario = type;
+            const data = SCENARIOS[type];
+
+            SYSTEM_STATE.incidents = JSON.parse(JSON.stringify(data.incidents));
+            SYSTEM_STATE.shelters = JSON.parse(JSON.stringify(data.shelters));
+
+            // Header Scenario Buttons Styling
+            ['normal', 'habagat', 'typhoon'].forEach(key => {
+                const btn = document.getElementById(`scen-btn-${key}`);
+                if (!btn) return;
+                
+                if (key === type) {
+                    if (key === 'normal') {
+                        btn.className = 'px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white border-emerald-400 shadow active:scale-95';
+                    } else if (key === 'habagat') {
+                        btn.className = 'px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-amber-600 text-white border-amber-400 shadow active:scale-95';
+                    } else {
+                        btn.className = 'px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-red-600 text-white border-red-400 pulse-red-glow active:scale-95';
+                    }
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg border text-[11px] font-bold transition flex items-center gap-1.5 bg-dark-850 text-slate-400 border-slate-700 active:scale-95';
+                }
+            });
+
+            // Update Alert Badges
+            const badgeText = document.getElementById('global-alert-text');
+            const badgeContainer = document.getElementById('global-alert-badge');
+            if (badgeText && badgeContainer) {
+                badgeText.innerText = data.alertText;
+                badgeContainer.className = data.alertClass;
+            }
+
+            // Update Telemetry Metrics
+            document.getElementById('home-temp').innerText = data.temp;
+            document.getElementById('home-rain').innerText = `${data.rain} Rain`;
+            document.getElementById('home-wind').innerText = data.wind;
+            document.getElementById('home-weather-desc').innerText = data.weatherDesc;
+            document.getElementById('home-weather-desc').className = type === 'normal' ? 'text-emerald-400 font-bold' : type === 'habagat' ? 'text-amber-400 font-bold' : 'text-red-400 font-bold';
+            
+            const iconElem = document.getElementById('home-weather-icon');
+            if (iconElem) iconElem.className = `fa-solid ${data.weatherIcon}`;
+
+            const barElem = document.getElementById('home-card-bar-1');
+            if (barElem) barElem.className = data.barClass;
+
+            document.getElementById('home-alert-level-text').innerText = type === 'normal' ? 'GREEN ALERT' : type === 'habagat' ? 'ORANGE ALERT' : 'RED ALERT';
+            document.getElementById('home-alert-level-text').className = type === 'normal' ? 'text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono leading-tight' : type === 'habagat' ? 'text-xl sm:text-2xl font-extrabold text-amber-400 font-mono leading-tight' : 'text-xl sm:text-2xl font-extrabold text-red-400 font-mono leading-tight';
+
+            SYSTEM_STATE.activities.unshift({
+                title: 'Scenario Changed',
+                desc: `Simulated state set to: ${data.name}`,
+                time: 'Just now',
+                icon: 'fa-sliders',
+                color: type === 'normal' ? 'text-emerald-400' : type === 'habagat' ? 'text-amber-400' : 'text-red-400'
+            });
+
+            showToast(`Scenario set to: ${data.name}`, 'info');
+
+            renderAll();
+            fetchMultiDayForecast();
+        }
+
+        // ==========================================
+        // TAB SWITCHER (DESKTOP & MOBILE BOTTOM BAR)
+        // ==========================================
+        function switchTab(tabId) {
+            SYSTEM_STATE.currentTab = tabId;
+
+            // Hide all tab sections
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+
+            // Desktop tab styling
+            document.querySelectorAll('.dtab-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white');
+                btn.classList.add('text-slate-400');
+            });
+
+            // Mobile tab styling
+            document.querySelectorAll('.mtab-btn').forEach(btn => {
+                btn.classList.remove('text-brand-400');
+                btn.classList.add('text-slate-400');
+            });
+
+            // Show selected section
+            const targetSec = document.getElementById(`sec-${tabId}`);
+            if (targetSec) targetSec.classList.remove('hidden');
+
+            // Active tab highlights
+            const activeDTab = document.getElementById(`dtab-${tabId}`);
+            if (activeDTab) {
+                activeDTab.classList.remove('text-slate-400');
+                activeDTab.classList.add('bg-brand-600', 'text-white');
+            }
+
+            const activeMTab = document.getElementById(`mtab-${tabId}`);
+            if (activeMTab) {
+                activeMTab.classList.remove('text-slate-400');
+                activeMTab.classList.add('text-brand-400');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderAll() {
+            renderHomeSummary();
+            renderQueue();
+            renderShelters();
+            renderBroadcastHistory();
+        }
+
+        // ==========================================
+        // TAB 1: HOME LOGIC
+        // ==========================================
+        function renderHomeSummary() {
+            const highInc = SYSTEM_STATE.incidents.filter(i => i.priority === 'High').length;
+            const resolvedInc = SYSTEM_STATE.incidents.filter(i => i.status === 'Resolved').length;
+            
+            let totalOcc = 0;
+            SYSTEM_STATE.shelters.forEach(s => { totalOcc += s.occupied; });
+
+            document.getElementById('home-inc-total').innerText = SYSTEM_STATE.incidents.length;
+            document.getElementById('home-inc-high').innerText = highInc;
+            document.getElementById('home-inc-resolved').innerText = resolvedInc;
+
+            document.getElementById('home-evac-total').innerText = totalOcc.toLocaleString();
+
+            const dBadge = document.getElementById('dinc-badge');
+            if (dBadge) dBadge.innerText = SYSTEM_STATE.incidents.length;
+
+            const feed = document.getElementById('home-activity-feed');
+            feed.innerHTML = '';
+            SYSTEM_STATE.activities.forEach(act => {
+                const item = document.createElement('div');
+                item.className = 'bg-dark-950 p-2.5 rounded-xl border border-slate-800 flex items-start gap-2.5 text-xs';
+                item.innerHTML = `
+                    <div class="w-7 h-7 rounded-lg bg-dark-900 border border-slate-800 flex items-center justify-center ${act.color} text-xs shrink-0">
+                        <i class="fa-solid ${act.icon}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-1">
+                            <h4 class="font-bold text-white text-[11px] truncate">${act.title}</h4>
+                            <span class="text-[9px] text-slate-500 font-mono shrink-0">${act.time}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5 leading-normal truncate">${act.desc}</p>
+                    </div>
+                `;
+                feed.appendChild(item);
+            });
+        }
+
+        // ==========================================
+        // TAB 2: WEATHER MAP & FORECAST LOGIC
+        // ==========================================
+        function switchWindyView(target) {
+            const catWrapper = document.getElementById('windy-catanduanes-wrapper');
+            const parWrapper = document.getElementById('windy-par-wrapper');
+            const btnCat = document.getElementById('btn-windy-catanduanes');
+            const btnPar = document.getElementById('btn-windy-par');
+
+            if (target === 'catanduanes') {
+                catWrapper.classList.remove('hidden');
+                parWrapper.classList.add('hidden');
+                btnCat.className = 'px-3 py-1.5 font-bold rounded-lg transition bg-brand-500 text-white shadow text-[11px] active:scale-95';
+                btnPar.className = 'px-3 py-1.5 font-semibold rounded-lg transition text-slate-400 hover:text-white text-[11px] active:scale-95';
+            } else {
+                catWrapper.classList.add('hidden');
+                parWrapper.classList.remove('hidden');
+                btnPar.className = 'px-3 py-1.5 font-bold rounded-lg transition bg-brand-500 text-white shadow text-[11px] active:scale-95';
+                btnCat.className = 'px-3 py-1.5 font-semibold rounded-lg transition text-slate-400 hover:text-white text-[11px] active:scale-95';
+            }
+        }
+
+        // Dedicated Windy Map Refresh Function
+        function refreshWindyMap() {
+            const catIframe = document.getElementById('iframe-windy-catanduanes');
+            const parIframe = document.getElementById('iframe-windy-par');
+            
+            if (catIframe) catIframe.src = catIframe.src;
+            if (parIframe) parIframe.src = parIframe.src;
+            
+            showToast('Refreshed live satellite radar feed.', 'info');
+        }
+
+        function fetchMultiDayForecast() {
+            const grid = document.getElementById('forecast-grid');
+            grid.innerHTML = `<div class="col-span-full py-6 text-center text-slate-400 text-xs"><i class="fa-solid fa-spinner animate-spin text-brand-400 mr-1.5"></i> Loading forecast model...</div>`;
+            setTimeout(() => { renderScenarioForecast(); }, 250);
+        }
+
+        function renderScenarioForecast() {
+            const grid = document.getElementById('forecast-grid');
+            grid.innerHTML = '';
+            const scen = SYSTEM_STATE.currentScenario;
+            const now = new Date();
+
+            for (let i = 0; i < 7; i++) {
+                const dateObj = new Date(now);
+                dateObj.setDate(now.getDate() + i);
+                const dayName = i === 0 ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const monthDay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                let maxTemp, minTemp, rain, wind, label, icon, iconColor, riskBadge, riskText;
+
+                if (scen === 'typhoon') {
+                    if (i === 0) { maxTemp = 24; minTemp = 22; rain = 95.0; wind = 210; label = 'Super Typhoon'; icon = 'fa-cloud-bolt'; iconColor = 'text-red-400'; riskBadge = 'bg-red-500/20 text-red-400 border-red-500/40'; riskText = 'CRITICAL'; }
+                    else if (i === 1) { maxTemp = 26; minTemp = 23; rain = 42.0; wind = 90; label = 'Heavy Storm'; icon = 'fa-cloud-showers-heavy'; iconColor = 'text-amber-400'; riskBadge = 'bg-amber-500/20 text-amber-400 border-amber-500/40'; riskText = 'HIGH RISK'; }
+                    else if (i === 2) { maxTemp = 28; minTemp = 24; rain = 15.0; wind = 35; label = 'Scattered Rain'; icon = 'fa-cloud-sun-rain'; iconColor = 'text-cyan-400'; riskBadge = 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'; riskText = 'MODERATE'; }
+                    else { maxTemp = 30; minTemp = 25; rain = 2.0; wind = 15; label = 'Partly Cloudy'; icon = 'fa-cloud-sun'; iconColor = 'text-amber-300'; riskBadge = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'; riskText = 'LOW RISK'; }
+                } else if (scen === 'habagat') {
+                    if (i < 3) { maxTemp = 25; minTemp = 23; rain = 38.5; wind = 65; label = 'Monsoon Rain'; icon = 'fa-cloud-showers-heavy'; iconColor = 'text-amber-400'; riskBadge = 'bg-amber-500/20 text-amber-400 border-amber-500/40'; riskText = 'FLOOD RISK'; }
+                    else { maxTemp = 29; minTemp = 24; rain = 8.0; wind = 25; label = 'Passing Rain'; icon = 'fa-cloud-sun-rain'; iconColor = 'text-cyan-400'; riskBadge = 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'; riskText = 'MODERATE'; }
+                } else {
+                    maxTemp = 30 - (i % 2); minTemp = 24; rain = 0.5; wind = 12; label = 'Fair & Clear'; icon = 'fa-sun'; iconColor = 'text-amber-300'; riskBadge = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'; riskText = 'LOW RISK';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-dark-950 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between text-center space-y-1.5';
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="font-extrabold text-[11px] text-white">${dayName}</div>
+                        <div class="text-[9px] text-slate-500 font-mono">${monthDay}</div>
+                    </div>
+
+                    <div class="my-0.5">
+                        <i class="fa-solid ${icon} text-xl ${iconColor}"></i>
+                        <div class="text-[10px] font-semibold text-slate-300 mt-0.5 leading-tight truncate">${label}</div>
+                    </div>
+
+                    <div class="space-y-0.5 text-[10px] font-mono">
+                        <div class="text-white font-bold">${maxTemp}° / <span class="text-slate-400 font-normal">${minTemp}°C</span></div>
+                        <div class="text-cyan-400 text-[9px]"><i class="fa-solid fa-droplet mr-0.5"></i>${rain}mm</div>
+                    </div>
+
+                    <div class="pt-1.5 border-t border-slate-800/80">
+                        <span class="px-1.5 py-0.5 rounded text-[8px] font-bold border ${riskBadge}">${riskText}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        // ==========================================
+        // TAB 3: INCIDENT REPORTING (NO AI / DATALIST)
+        // ==========================================
+        function updateBarangayDatalist() {
+            const muniSelect = document.getElementById('rep-muni');
+            const datalist = document.getElementById('barangay-list');
+            if (!muniSelect || !datalist) return;
+
+            const selectedMuni = muniSelect.value;
+            const list = SYSTEM_STATE.barangays[selectedMuni] || ['Poblacion'];
+            datalist.innerHTML = list.map(b => `<option value="${b}">`).join('');
+        }
+
+        function previewPhoto(input) {
+            const label = document.getElementById('photo-label');
+            if (input.files && input.files[0]) {
+                label.innerText = `✔ Attached: ${input.files[0].name}`;
+                label.className = 'block text-emerald-400 text-[11px] font-bold';
+            }
+        }
+
+        function handleIncidentSubmit(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('rep-name').value;
+            const phone = document.getElementById('rep-phone').value;
+            const muni = document.getElementById('rep-muni').value;
+            const brgy = document.getElementById('rep-brgy').value;
+            const cat = document.getElementById('rep-category').value;
+            const priority = document.getElementById('rep-priority').value;
+            const desc = document.getElementById('rep-description').value;
+
+            const newIncident = {
+                id: `INC-${Math.floor(1000 + Math.random() * 9000)}`,
+                reporter: name,
+                phone: phone,
+                municipality: muni,
+                barangay: brgy,
+                category: cat,
+                description: desc,
+                priority: priority,
+                timestamp: 'Just now',
+                status: 'Pending'
+            };
+
+            SYSTEM_STATE.incidents.unshift(newIncident);
+
+            SYSTEM_STATE.activities.unshift({
+                title: 'New Incident Submitted',
+                desc: `${priority} priority ${cat} report in ${muni}, Brgy. ${brgy}.`,
+                time: 'Just now',
+                icon: 'fa-paper-plane',
+                color: priority === 'High' ? 'text-red-400' : 'text-amber-400'
+            });
+
+            showToast(`Incident ${newIncident.id} queued for dispatch.`, 'success');
+
+            document.getElementById('incident-report-form').reset();
+            document.getElementById('photo-label').innerText = '📷 Tap to simulate photo attachment';
+            document.getElementById('photo-label').className = 'block text-slate-400 text-[11px]';
+            updateBarangayDatalist();
+            
+            renderQueue();
+            renderHomeSummary();
+        }
+
+        function filterQueue(priority) {
+            SYSTEM_STATE.filterQueuePriority = priority;
+            
+            document.querySelectorAll('[id^="qfilter-"]').forEach(btn => {
+                btn.className = 'px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 shrink-0';
+            });
+            const btnActive = document.getElementById(`qfilter-${priority}`);
+            if (btnActive) btnActive.className = 'px-2.5 py-1 rounded-lg bg-brand-600 text-white font-bold shrink-0';
+
+            renderQueue();
+        }
+
+        function renderQueue() {
+            const container = document.getElementById('queue-container');
+            container.innerHTML = '';
+
+            let list = SYSTEM_STATE.incidents;
+
+            if (SYSTEM_STATE.filterQueuePriority === 'High') {
+                list = list.filter(i => i.priority === 'High');
+            } else if (SYSTEM_STATE.filterQueuePriority === 'Pending') {
+                list = list.filter(i => i.status === 'Pending');
+            } else if (SYSTEM_STATE.filterQueuePriority === 'Resolved') {
+                list = list.filter(i => i.status === 'Resolved');
+            }
+
+            document.getElementById('queue-total-count').innerText = list.length;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-500 text-xs">No reports match the current filter.</div>`;
+                return;
+            }
+
+            list.forEach(inc => {
+                const card = document.createElement('div');
+                card.className = 'bg-dark-950 p-3 rounded-xl border border-slate-800 space-y-2';
+
+                let prioBadge = inc.priority === 'High' 
+                    ? 'bg-red-500/20 text-red-400 border-red-500/40 pulse-red-glow' 
+                    : inc.priority === 'Medium' 
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-1 text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-extrabold border ${prioBadge}">
+                                ${inc.priority.toUpperCase()}
+                            </span>
+                            <span class="font-mono text-[10px] text-slate-400">${inc.id}</span>
+                        </div>
+                        <span class="text-[9px] text-slate-500 font-mono"><i class="fa-regular fa-clock mr-1"></i>${inc.timestamp}</span>
+                    </div>
+
+                    <div class="text-xs font-bold text-white">
+                        <i class="fa-solid fa-location-dot text-brand-400 mr-1"></i> ${inc.municipality}, Brgy. ${inc.barangay}
+                    </div>
+
+                    <p class="text-[11px] text-slate-300 bg-dark-900/60 p-2 rounded-lg border border-slate-800/80 leading-relaxed">
+                        "${inc.description}"
+                    </p>
+
+                    <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800/80 text-[10px]">
+                        <div class="text-slate-400 truncate">
+                            By: <strong class="text-slate-200">${inc.reporter}</strong> (${inc.phone})
+                        </div>
+
+                        <select onchange="updateIncidentStatus('${inc.id}', this.value)" class="bg-dark-900 border border-slate-700 rounded px-2 py-1 text-[10px] text-white focus:outline-none">
+                            <option value="Pending" ${inc.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="In Progress" ${inc.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Resolved" ${inc.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                        </select>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateIncidentStatus(incId, newStatus) {
+            const inc = SYSTEM_STATE.incidents.find(i => i.id === incId);
+            if (inc) {
+                inc.status = newStatus;
+                showToast(`Incident ${incId} status set to ${newStatus}`, 'info');
+                renderQueue();
+                renderHomeSummary();
+            }
+        }
+
+        // ==========================================
+        // TAB 4: EVACUATION SHELTERS (ALL 11 TOWNS)
+        // ==========================================
+        function renderShelters() {
+            const container = document.getElementById('shelters-grid');
+            const queryElem = document.getElementById('shelter-search');
+            const query = queryElem ? queryElem.value.toLowerCase() : '';
+            container.innerHTML = '';
+
+            let list = SYSTEM_STATE.shelters;
+
+            if (query) {
+                list = list.filter(s => s.name.toLowerCase().includes(query) || s.municipality.toLowerCase().includes(query));
+            }
+
+            let totalOcc = 0;
+            SYSTEM_STATE.shelters.forEach(s => { totalOcc += s.occupied; });
+
+            document.getElementById('stat-shelters-count').innerText = `${SYSTEM_STATE.shelters.length} Centers`;
+            document.getElementById('stat-evacuees-count').innerText = `${totalOcc.toLocaleString()} Persons`;
+
+            list.forEach(sh => {
+                let statusBadgeText = sh.status || 'ACTIVE SHELTER';
+                let statusBadgeClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+                if (sh.occupied > 500) {
+                    statusBadgeText = 'HIGH INTAKE RECEIVING';
+                    statusBadgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+                } else if (sh.occupied > 100) {
+                    statusBadgeText = 'RECEIVING EVACUEES';
+                    statusBadgeClass = 'bg-brand-500/20 text-brand-400 border-brand-500/40';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bg-dark-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5 flex flex-col justify-between';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-1.5 mb-1.5">
+                            <div>
+                                <span class="text-[9px] font-bold text-brand-400 uppercase tracking-wider">${sh.municipality}</span>
+                                <h4 class="font-bold text-xs text-white leading-snug">${sh.name}</h4>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold border shrink-0 ${statusBadgeClass}">${statusBadgeText}</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 block mb-2">📍 ${sh.location}</span>
+
+                        <div class="bg-dark-900 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between mb-2">
+                            <span class="text-[11px] text-slate-400">Evacuees Logged:</span>
+                            <span class="text-base font-extrabold font-mono text-cyan-400">${sh.occupied.toLocaleString()}</span>
+                        </div>
+                    </div>
+
+                    <!-- Touch-Friendly Numeric Controls -->
+                    <div class="flex items-center gap-1.5 bg-dark-900 p-1.5 rounded-lg border border-slate-800">
+                        <input type="number" id="input-${sh.id}" min="1" placeholder="Qty" class="w-16 bg-dark-950 border border-slate-700 text-white text-xs p-2 rounded text-center focus:outline-none focus:border-brand-500 font-mono min-h-[38px]">
+                        
+                        <button onclick="modifyShelterCount('${sh.id}', 'add')" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-bold text-[11px] py-2 px-1.5 rounded transition active:scale-95 min-h-[38px]">
+                            + In
+                        </button>
+
+                        <button onclick="modifyShelterCount('${sh.id}', 'subtract')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] py-2 px-1.5 rounded border border-slate-700 transition active:scale-95 min-h-[38px]">
+                            - Out
+                        </button>
+
+                        <button onclick="modifyShelterCount('${sh.id}', 'set')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] py-2 px-2 rounded transition active:scale-95 min-h-[38px]" title="Set exact headcount">
+                            Set
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function modifyShelterCount(id, action) {
+            const inputElem = document.getElementById(`input-${id}`);
+            let val = inputElem ? parseInt(inputElem.value, 10) : NaN;
+            if (isNaN(val) || val <= 0) val = 1;
+
+            const sh = SYSTEM_STATE.shelters.find(s => s.id === id);
+            if (sh) {
+                if (action === 'add') sh.occupied += val;
+                else if (action === 'subtract') sh.occupied = Math.max(0, sh.occupied - val);
+                else if (action === 'set') sh.occupied = Math.max(0, val);
+
+                if (inputElem) inputElem.value = '';
+                
+                showToast(`Updated ${sh.municipality}: ${sh.occupied} evacuees`, 'success');
+
+                SYSTEM_STATE.activities.unshift({
+                    title: 'Shelter Count Updated',
+                    desc: `${sh.name} (${sh.municipality}) set to ${sh.occupied} evacuees.`,
+                    time: 'Just now',
+                    icon: 'fa-house-chimney-user',
+                    color: 'text-emerald-400'
+                });
+
+                renderShelters();
+                renderHomeSummary();
+            }
+        }
+
+        // ==========================================
+        // TAB 5: BROADCAST CONSOLE
+        // ==========================================
+        function handleBroadcastSubmit(e) {
+            e.preventDefault();
+
+            const level = document.getElementById('bcast-level').value;
+            const scope = document.getElementById('bcast-scope').value;
+            const msg = document.getElementById('bcast-msg').value;
+
+            const newBroadcast = {
+                id: `BC-${Math.floor(100 + Math.random() * 900)}`,
+                level: level,
+                scope: scope,
+                message: msg,
+                timestamp: 'Just now'
+            };
+
+            SYSTEM_STATE.broadcasts.unshift(newBroadcast);
+
+            SYSTEM_STATE.activities.unshift({
+                title: 'Cell Broadcast Sent',
+                desc: `[${level}] dispatched to ${scope} subscribers.`,
+                time: 'Just now',
+                icon: 'fa-tower-cell',
+                color: 'text-red-400'
+            });
+
+            showToast(`Broadcast ${newBroadcast.id} dispatched to ${scope}!`, 'success');
+
+            document.getElementById('bcast-msg').value = '';
+            renderBroadcastHistory();
+            renderHomeSummary();
+        }
+
+        function renderBroadcastHistory() {
+            const container = document.getElementById('broadcast-history-list');
+            container.innerHTML = '';
+
+            SYSTEM_STATE.broadcasts.forEach(bc => {
+                let badgeClass = bc.level.includes('EXTREME') 
+                    ? 'bg-red-500/20 text-red-400 border-red-500/40' 
+                    : bc.level.includes('WEATHER')
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+
+                const card = document.createElement('div');
+                card.className = 'bg-dark-950 p-3 rounded-xl border border-slate-800 space-y-1.5 text-xs';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold border ${badgeClass}">${bc.level}</span>
+                        <span class="font-mono text-slate-500 text-[9px]">${bc.timestamp}</span>
+                    </div>
+                    <div class="font-bold text-white flex items-center gap-1.5 text-[11px]">
+                        <i class="fa-solid fa-tower-cell text-brand-400"></i> Scope: ${bc.scope}
+                    </div>
+                    <p class="text-[11px] text-slate-300 bg-dark-900/60 p-2 rounded-lg border border-slate-800 leading-relaxed">
+                        ${bc.message}
+                    </p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // NOTIFICATION TOAST UTILITY
+        // ==========================================
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 ${
+                type === 'success' ? 'bg-emerald-950 border-emerald-500/50 text-emerald-200' :
+                type === 'error' ? 'bg-red-950 border-red-500/50 text-red-200' :
+                'bg-dark-900 border-brand-500/50 text-brand-200'
+            }`;
+
+            const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : type === 'error' ? 'fa-circle-xmark text-red-400' : 'fa-circle-info text-brand-400';
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="truncate">${msg}</span>`;
+            
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 2800);
+        }
+    </script>
+</body>
+</html>
